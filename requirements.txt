@@ -1,0 +1,20 @@
+# ========= Web 前端 =========
+streamlit>=1.30.0
+
+# ========= Agent 编排 =========
+crewai>=0.80.0
+
+# ========= 大模型 SDK =========
+zhipuai>=2.1.0           # 智谱 AI，CogView 生图
+# DeepSeek 走 LiteLLM 内置的 OpenAI 兼容协议，无需单独 SDK
+
+# ========= 检索 Skill =========
+duckduckgo-search>=6.0.0
+tavily-python>=0.5.0     # 可选；无 Key 时自动降级 DuckDuckGo
+
+# ========= 图像处理 Skill =========
+Pillow>=10.0.0
+
+# ========= 工具 =========
+requests>=2.31.0
+pydantic>=2.5.0
