@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 # 🌸 Xiaohongshu AI Studio (v1.4)
+=======
+# 🌸 Xiaohongshu AI Studio
+>>>>>>> adbd2e355d559df602ff3d0c025ce103cdb6f217
 
 多 Agent 协作 · 影子题库 RAG · 小红书爆款图文生成器
 
@@ -107,5 +111,13 @@ streamlit run app.py
 
 ## 🔐 上线 Checklist
 
+<<<<<<< HEAD
 见 `DEPLOY.md`。核心：所有 Key revoke 重发、Key 设月度配额、
 服务器装中文字体、关闭 8501 公网、加 Nginx 鉴权。
+=======
+- [CrewAI](https://crewai.com/) — 多智能体编排框架
+- [DeepSeek](https://deepseek.com/) — 高性能 LLM
+- [智谱 AI](https://open.bigmodel.cn/) — CogView 图像生成
+- [Streamlit](https://streamlit.io/) — 快速 Web 应用框架
+- [Adobe 思源黑体](https://github.com/adobe-fonts/source-han-sans) — 免费可商用的高质量中文字体
+>>>>>>> adbd2e355d559df602ff3d0c025ce103cdb6f217
