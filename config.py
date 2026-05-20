@@ -76,7 +76,7 @@ class Config:
     zhipu_cogview_model: str = "cogview-3-plus"
     # Seedream 4.0 是当前最新（2025-09 上线 4K 能力），如果账号未开通可改回 3.0:
     #   "doubao-seedream-3-0-t2i-250415"
-    doubao_seedream_model: str = "doubao-seedream-4-0-250828"
+    doubao_seedream_model: str = "doubao-seedream-5-0-260128"
 
     # ======== Agent → Provider 路由（可被环境变量覆盖） ========
     trend_analyst_provider: str = field(
