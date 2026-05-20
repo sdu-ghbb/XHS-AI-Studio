@@ -1,238 +1,111 @@
-# 🌸 Xiaohongshu AI Studio
+# 🌸 Xiaohongshu AI Studio (v1.4)
 
-**多 Agent 协作 · 一键产出小红书爆款图文**
+多 Agent 协作 · 影子题库 RAG · 小红书爆款图文生成器
 
-[![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/)
-[![CrewAI](https://img.shields.io/badge/CrewAI-≥0.80-orange.svg)](https://crewai.com/)
-[![Streamlit](https://img.shields.io/badge/Streamlit-≥1.30-red.svg)](https://streamlit.io/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-
-基于 **CrewAI** 多智能体框架打造的 AI 内容工作室。输入一个选题关键词，三个 AI Agent 自动完成**趋势分析 → 文案撰写 → 海报合成**的全流程，一站式输出小红书爆款图文。
-
----
-
-## 🧬 工作流水线
-
-```
-┌─────────────────────┐      ┌──────────────────┐      ┌─────────────────────┐
-│  Agent 1            │      │  Agent 2         │      │  Agent 3            │
-│  爆款趋势分析师      │ ────▶│  新媒体金牌文案    │ ────▶│  视觉排版总监        │
-│                     │      │                  │      │                     │
-│  · Web 搜索热点     │      │  · 爆款标题撰写   │      │  · 英文图像 Prompt  │
-│  · 用户痛点拆解     │      │  · 300-500 字正文 │      │  · CogView 生图    │
-│  · 爆款标题套路     │      │  · Emoji 排版     │      │  · Pillow 中文叠字  │
-│  · 话题标签建议     │      │  · 海报标题锚点   │      │  · 海报本地输出     │
-└──────────┬──────────┘      └────────┬─────────┘      └──────────┬──────────┘
-           │                          │                           │
-           ▼                          ▼                           ▼
-    选题策略报告               小红书图文 + 标题锚点            poster_final.jpg
-```
-
-三个 Agent 以 **Sequential Process** 顺序执行，前一个 Agent 的输出作为后一个 Agent 的上下文（`context`），保证内容的一致性。
-
----
-
-## ✨ 核心特性
-
-- **🧠 多 Agent 协作**：基于 CrewAI 框架，三个角色分工明确、流水线串行，模拟真实内容团队的工作流程
-- **🔍 智能信息检索**：Agent 自主调用搜索引擎，挖掘社交媒体热点、用户痛点和爆款标题套路（Tavily 优先，DuckDuckGo 自动降级）
-- **✍️ 地道小红书文风**：Emoji 排版、分段干货、话题标签，贴合平台生态
-- **🎨 AI 海报合成**：智谱 CogView-3-Plus 生成高质感底图 + Pillow 叠加中文大标题（白字黑边 + 半透明背景条，任何底图可读）
-- **📡 实时思考流**：Streamlit 端实时展示每个 Agent 的思考步骤，过程透明可观测
-- **🌐 中文字体多级 Fallback**：Windows/macOS/Linux 系统字体自动探测 → 网络下载思源黑体 → 默认字体兜底，保证任意环境出图可读
-- **🔐 API Key 仅存会话内存**：刷新即清空，不落盘
-
----
-
-## 🛠️ 技术栈
-
-| 层级 | 技术 | 说明 |
-|------|------|------|
-| **Agent 编排** | [CrewAI](https://crewai.com/) | 多 Agent 框架，Sequential Process 流水线 |
-| **大模型 (LLM)** | [DeepSeek](https://deepseek.com/) (via LiteLLM) | 逻辑推理 & 文案生成 |
-| **图像生成** | [智谱 CogView-3-Plus](https://open.bigmodel.cn/) | 1024×1024 高质量底图 |
-| **图像处理** | [Pillow](https://python-pillow.org/) | 中文标题叠字、字体渲染 |
-| **信息检索** | Tavily / DuckDuckGo | 多级降级搜索策略 |
-| **Web 界面** | [Streamlit](https://streamlit.io/) | 实时交互 UI |
-| **数据校验** | [Pydantic](https://docs.pydantic.dev/) | Tool 入参 Schema |
-
----
-
-## 📦 安装
-
-### 前置要求
-
-- Python 3.10+
-- Windows / macOS / Linux
-
-### 步骤
-
-```bash
-# 1. 克隆仓库
-git clone https://github.com/your-username/xiaohongshu-ai-studio.git
-cd xiaohongshu-ai-studio
-
-# 2. 创建虚拟环境（推荐）
-python -m venv venv
-source venv/bin/activate   # macOS / Linux
-venv\Scripts\activate      # Windows
-
-# 3. 安装依赖
-pip install -r requirements.txt
-```
-
----
-
-## 🔑 配置 API Key
-
-本应用需要两个 API Key：
-
-| Key | 用途 | 获取地址 |
-|-----|------|----------|
-| **DeepSeek API Key** | LLM 大脑（逻辑 + 文案） | https://platform.deepseek.com/ |
-| **ZhipuAI API Key** | CogView-3-Plus 生图 | https://open.bigmodel.cn/ |
-| Tavily API Key（可选） | 高质量搜索结果 | https://tavily.com/ |
-
-### 方式一：环境变量（推荐）
-
-```bash
-export DEEPSEEK_API_KEY="sk-xxxxxxxxxxxxxxxx"
-export ZHIPUAI_API_KEY="xxxxxxxxxxxxxxxxxxxx"
-export TAVILY_API_KEY="tvly-xxxxxxxxxxxx"    # 可选
-```
-
-### 方式二：应用侧边栏
-
-启动后直接在 Streamlit 侧边栏填写，仅保存在当前会话内存中，关闭浏览器即清空。
-
----
-
-## 🚀 使用
-
-### Windows
-
-双击 `start.bat`，自动清除端口占用 → 启动 Streamlit → 打开浏览器。
-
-### macOS / Linux
-
-```bash
-streamlit run app.py --server.port 8501
-```
-
-### 操作流程
-
-1. 在左侧侧边栏填写 API Key
-2. 输入选题关键词（如 `秋冬通勤穿搭`、`学生党护肤`、`周末市集`）
-3. 点击 **🚀 启动 Agent 协作**
-4. 观察右侧 **Agent 思考实时流**，等待约 30-90 秒
-5. 在 **🎁 成品交付** 区域查看并下载：
-   - **左栏**：海报成品（可直接下载 JPG）
-   - **右栏**：文案正文（全选复制）
-   - **折叠区**：完整选题策略报告
+**v1.4 改动**：影子题库 RAG（方案一）+ Bocha 进阶搜索（方案二）双打数据源
 
 ---
 
 ## 📁 项目结构
 
 ```
-xiaohongshu-ai-studio/
-├── app.py                 # Streamlit 主应用（UI + 实时日志 + 结果渲染）
-├── agents.py              # Agent 与 Task 定义（CrewAI 流水线编排）
-├── tools.py               # 工具集（WebSearch + ZhipuImagePoster + Pillow 叠字）
-├── requirements.txt       # Python 依赖
-├── start.bat              # Windows 一键启动脚本
-├── outputs/               # 海报输出目录（自动创建）
-│   └── poster_final.jpg   # 最终海报文件
-└── fonts/                 # 备用中文字体（自动下载）
+xhs_studio/
+├── app.py                  # Streamlit 主程序
+├── agents.py               # 4 角色 + 自检循环
+├── tools.py                # 5 个 Skill：影子题库/搜索/生图/审图/合规
+├── knowledge_base.py       # 🆕 影子题库 RAG 引擎（三级降级）
+├── build_kb.py             # 🆕 本地建库脚本（种子库 / MediaCrawler）
+├── kb/seed_notes.json      # 🆕 40 篇种子库（零配置启动）
+├── examples.py             # 5 篇 Few-shot 样本
+├── templates.py            # 4 套海报模板
+├── prompts.py              # 分品类图像 Prompt 库
+├── compliance.py           # 违禁词合规审查
+├── observability.py        # Langfuse 监控
+├── config.py               # 配置单一真源
+├── backend_architecture.md # 上线后端架构方案
+├── DEPLOY.md               # 🆕 服务器部署指南
+├── .env / .env.example / .gitignore
+├── requirements.txt
+└── README.md
 ```
 
-### 各文件职责
+## 🧠 数据源策略：双打方案
 
-| 文件 | 职责 |
-|------|------|
-| `app.py` | Streamlit 前端：页面布局、Session State 管理、后台线程执行 Crew、实时日志渲染、成品展示 |
-| `agents.py` | 定义三个 Agent（Trend Analyst / Copywriter / Art Director）和三个 Task，组装 Crew |
-| `tools.py` | 两个 CrewAI Tool：`WebSearchTool`（多级检索降级）、`ZhipuImagePosterTool`（生图 + 叠字），以及中文字体探测/叠字核心函数 |
-| `start.bat` | Windows 启动脚本：释放 8501 端口 → 启动 Streamlit → 自动打开浏览器 |
-
----
-
-## 📝 Agent 详解
-
-### Agent 1 — 爆款趋势分析师
-
-- **工具**：`WebSearch`（Tavily → DuckDuckGo 自动降级）
-- **能力**：检索社交媒体热点、拆解用户痛点、提炼爆款标题套路、推荐话题标签
-- **输出**：Markdown 结构化的选题策略报告
-
-### Agent 2 — 新媒体金牌文案
-
-- **能力**：基于策略报告撰写小红书爆款图文（Emoji 排版、分段干货、话题标签）
-- **协议**：文末必须以固定格式 `海报标题: xxx` 输出 ≤15 字的海报标题锚点
-- **输出**：完整图文文案 + 标题锚点（锚点由后续 Agent 正则提取，用户不可见）
-
-### Agent 3 — 视觉排版总监
-
-- **工具**：`ZhipuImagePoster`（CogView-3-Plus 生图 + Pillow 叠字，原子化调用）
-- **能力**：撰写英文图像 Prompt → 调用智谱生图 → Pillow 叠加中文大标题
-- **输出**：海报本地路径（如 `./outputs/poster_final.jpg`）+ 视觉说明
-
----
-
-## 🔧 自定义
-
-### 更换 LLM
-
-在 `agents.py` 中修改 `build_deepseek_llm` 函数的 `model` 参数：
-
-```python
-return LLM(
-    model="deepseek/deepseek-chat",   # 替换为其他 LiteLLM 支持的模型
-    api_key=api_key,
-    temperature=0.7,
-)
+```
+Trend Analyst 的检索逻辑：
+  ┌─ 1. ShadowKBSearch（影子题库）── 首选
+  │     本地真实爆款库，零成本、100%合规、纯正小红书语料
+  │     三级降级：向量RAG → 关键词匹配 → 提示改用 Bocha
+  │
+  └─ 2. BochaWebSearch（进阶搜索）── 补充
+        自动注入"爆款拆解"限定词，专挖公众号/知乎上
+        MCN 操盘手写的拆解报告，白嫖别人的千瓜数据分析
 ```
 
-CrewAI 通过 LiteLLM 统一接口调用，支持 OpenAI、Anthropic、通义千问等 100+ 模型。
+## 🗂️ 影子题库（方案一核心）
 
-### 调整海报尺寸
+**思路**：小红书 80% 常青品类的爆款底层逻辑变化很慢，与其实时爬小红书
+（封 IP、不合规），不如维护本地"优质历史爆款库"做 RAG。
 
-在 `tools.py` 中修改 CogView 调用参数：
+| 项 | 选型 |
+|---|---|
+| 存储 | 纯 JSON + 内存检索（单机零依赖，<2万篇够用）|
+| Embedding | 通义 text-embedding-v3 |
+| 检索 | 余弦相似度 Top-K |
+| 降级 | 向量RAG → 关键词匹配 → Bocha |
 
-```python
-response = client.images.generations(
-    model="cogview-3-plus",
-    prompt=prompt,
-    size="1024x1024",    # 可替换为其他支持的尺寸
-)
+### 建库流程
+
+```bash
+# 快速启动：内置 40 篇种子库
+python build_kb.py --seed
+
+# 正式：本地用 MediaCrawler 爬 5000+ 篇（见 DEPLOY.md）
+python build_kb.py --input mediacrawler_output.json
 ```
 
-### 自定义字体
+⚠️ 建库在**本地电脑**做，别在服务器上爬。每半个月更新一次即可。
 
-在 `tools.py` 的 `FONT_CANDIDATES` 列表中添加你的字体路径即可，系统会按顺序自动探测。
+## 🚀 快速开始
 
----
+```bash
+pip install -r requirements.txt
+cp .env.example .env       # 填入 5 个 Key
+python build_kb.py --seed  # 构建影子题库
+streamlit run app.py
+```
 
-## ⚠️ 注意事项
+服务器部署见 `DEPLOY.md`（含 systemd / Nginx / 安全加固）。
 
-- **API Key 安全**：Key 仅在当前进程环境变量和 Streamlit Session State 内存中，刷新页面即清空。不要将包含真实 Key 的代码上传到公开仓库。
-- **生图耗时**：CogView-3-Plus 生图通常需要 10-30 秒，请耐心等待。
-- **海报输出**：每次运行会覆盖 `./outputs/poster_final.jpg`，如需保留请手动另存。
-- **网络环境**：首次运行时如果系统没有中文字体，会自动从 GitHub 下载思源黑体（约 8 MB），需要网络连接。
-- **DuckDuckGo 频率限制**：频繁搜索可能触发限流，建议配置 Tavily API Key 获得更稳定的搜索体验。
+## 🛣️ 模型路由（9 个模型协作）
 
----
+| 角色/用途 | 模型 |
+|---|---|
+| Trend Analyst | qwen-max |
+| Copywriter | doubao-1-5-pro |
+| Art Director | deepseek-chat |
+| Critic | qwen-plus |
+| VLM 审图 | qwen-vl-max |
+| Embedding | text-embedding-v3 |
+| 主力生图 | doubao-seedream-4.0 |
+| 备用生图 | cogview-3-plus |
+| 搜索 | bocha → duckduckgo |
 
-## 📄 License
+## ✅ Sprint 进度
 
-MIT License
+| Sprint | 状态 |
+|---|---|
+| Sprint 1（救命修复）| ✅ 完成 |
+| Sprint 2（上线必做）| 🟡 合规✅ 监控✅ 后端架构✅ 部署文档✅ / 后端代码待 DevOps |
+| Sprint 3（差异化）| 🟡 多模板✅ 组图✅ 移动端✅ 影子题库✅ / 用户画像待数据积累 |
 
----
+### 仍待办
+- 后端工程化（FastAPI/Celery/DB，见 backend_architecture.md）
+- 影子题库扩容到 5000+ 篇（本地跑 MediaCrawler）
+- 用户画像 / 风格指纹（需先积累真实用户数据）
+- 用户反馈数据落库 → 文案模型微调
 
-## 🙏 致谢
+## 🔐 上线 Checklist
 
-- [CrewAI](https://crewai.com/) — 多智能体编排框架
-- [DeepSeek](https://deepseek.com/) — 高性能 LLM
-- [智谱 AI](https://open.bigmodel.cn/) — CogView 图像生成
-- [Streamlit](https://streamlit.io/) — 快速 Web 应用框架
-- [Adobe 思源黑体](https://github.com/adobe-fonts/source-han-sans) — 免费可商用的高质量中文字体
+见 `DEPLOY.md`。核心：所有 Key revoke 重发、Key 设月度配额、
+服务器装中文字体、关闭 8501 公网、加 Nginx 鉴权。

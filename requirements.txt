@@ -1,20 +1,35 @@
 # ========= Web 前端 =========
 streamlit>=1.30.0
 
+# ========= 配置 =========
+python-dotenv>=1.0.0
+
 # ========= Agent 编排 =========
 crewai>=0.80.0
 
 # ========= 大模型 SDK =========
-zhipuai>=2.1.0           # 智谱 AI，CogView 生图
-# DeepSeek 走 LiteLLM 内置的 OpenAI 兼容协议，无需单独 SDK
+zhipuai>=2.1.0           # 智谱（CogView 备用图像）
+openai>=1.40.0           # VLM 审图 / OpenAI 兼容客户端
+# DeepSeek / 豆包 / 通义 走 LiteLLM 内置 OpenAI 兼容协议
 
 # ========= 检索 Skill =========
-duckduckgo-search>=6.0.0
-tavily-python>=0.5.0     # 可选；无 Key 时自动降级 DuckDuckGo
+duckduckgo-search>=6.0.0  # Bocha 降级用
 
-# ========= 图像处理 Skill =========
+# ========= 图像处理 =========
 Pillow>=10.0.0
 
 # ========= 工具 =========
 requests>=2.31.0
 pydantic>=2.5.0
+
+# ========= 可观测性（可选）=========
+langfuse>=2.0.0          # 配了 .env 中的 key 才生效
+
+# ========= 后端化（Sprint 2 上线时才需要，当前可不装）=========
+# fastapi>=0.110.0
+# uvicorn>=0.27.0
+# celery>=5.3.0
+# redis>=5.0.0
+# sqlalchemy>=2.0.0
+# psycopg2-binary>=2.9.0
+# oss2>=2.18.0
