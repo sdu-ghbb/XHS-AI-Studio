@@ -69,8 +69,8 @@ class Config:
 
     # ======== 影子题库路径 ========
     kb_dir: str = "./kb"
-    kb_file: str = "./kb/shadow_kb.json"      # 构建后的向量库
-    seed_file: str = "./kb/seed_notes.json"   # 内置种子库
+    kb_file: str = "./kb/shadow_kb.json"      # 构建后的向量库（含向量）
+    seed_file: str = "./seed_notes.json"      # 内置种子库（项目根目录）
 
     # ======== 图像模型 ID ========
     zhipu_cogview_model: str = "cogview-3-plus"

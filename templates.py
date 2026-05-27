@@ -349,10 +349,213 @@ class MagazineCoverTemplate(PosterTemplate):
 
 
 # =========================================================
+#  Template 5: 知识卡片(知识博主主打)
+# =========================================================
+
+class KnowledgeCardTemplate(PosterTemplate):
+    name = "knowledge_card"
+    description = "白底卡片 + 顶部主标题 + 下方 3 个干货点"
+    suitable_for = "知识博主主打模板:学习/职场/技能/经验复盘类"
+
+    def render(self, base_img, headline, subtitle="干货笔记"):
+        """
+        覆盖式渲染:白底卡片几乎覆盖整图,留少量底图做装饰
+        headline: 主标题
+        subtitle: 可以用 `|` 分隔三个要点,如 "技巧1 | 技巧2 | 技巧3"
+        """
+        img = base_img.convert("RGBA")
+        W, H = img.size
+        bold = find_bold_font()
+        reg = find_regular_font() or bold
+
+        # 半透明白色卡片(留 8% 边距让底图当装饰)
+        margin = int(W * 0.06)
+        overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
+        card = Image.new("RGBA",
+                         (W - 2 * margin, H - 2 * margin),
+                         (252, 252, 250, 245))
+        overlay.paste(card, (margin, margin), card)
+
+        draw = ImageDraw.Draw(overlay)
+
+        # ----- 顶部小标签(类别) -----
+        tag_text = "KNOWLEDGE · 干货"
+        tag_size = W // 38
+        tag_font = ImageFont.truetype(reg, tag_size) if reg else ImageFont.load_default()
+        tag_y = int(margin + W * 0.05)
+        draw.text((margin + int(W * 0.05), tag_y),
+                  tag_text, font=tag_font, fill=(180, 100, 200, 255))
+
+        # 紧贴标签下方一条短装饰线
+        line_y = tag_y + tag_size + 8
+        draw.line([(margin + int(W * 0.05), line_y),
+                   (margin + int(W * 0.18), line_y)],
+                  fill=(180, 100, 200, 255), width=3)
+
+        # ----- 主标题 -----
+        font_size = W // 13
+        font = ImageFont.truetype(bold, font_size) if bold else ImageFont.load_default()
+        max_chars = 9 if len(headline) > 10 else max(len(headline), 1)
+        lines = _wrap_cn(headline, max_chars)
+        line_height = int(font_size * 1.25)
+
+        y = line_y + int(font_size * 0.7)
+        for line in lines:
+            draw.text((margin + int(W * 0.05), y),
+                      line, font=font, fill=(30, 30, 40, 255))
+            y += line_height
+
+        # ----- 中部分隔线 -----
+        sep_y = y + int(font_size * 0.4)
+        draw.line([(margin + int(W * 0.05), sep_y),
+                   (W - margin - int(W * 0.05), sep_y)],
+                  fill=(220, 220, 225, 255), width=1)
+
+        # ----- 三个干货点(subtitle 用 | 切) -----
+        points = [p.strip() for p in (subtitle or "").split("|") if p.strip()][:3]
+        if not points:
+            points = ["核心要点 1", "核心要点 2", "核心要点 3"]
+        if len(points) < 3:
+            # 用占位词补齐(避免布局空洞)
+            points += [""] * (3 - len(points))
+
+        bullet_size = W // 28
+        bullet_font = ImageFont.truetype(reg, bullet_size) if reg else ImageFont.load_default()
+        py = sep_y + int(bullet_size * 1.2)
+
+        for i, point in enumerate(points, 1):
+            if not point:
+                continue
+            # 圆形数字徽章
+            badge_d = int(bullet_size * 1.4)
+            badge_x = margin + int(W * 0.05)
+            draw.ellipse(
+                [badge_x, py, badge_x + badge_d, py + badge_d],
+                fill=(255, 107, 157, 255),
+            )
+            num_font = ImageFont.truetype(bold, int(bullet_size * 0.9)) if bold else bullet_font
+            num_str = str(i)
+            n_bbox = draw.textbbox((0, 0), num_str, font=num_font)
+            n_w = n_bbox[2] - n_bbox[0]
+            n_h = n_bbox[3] - n_bbox[1]
+            draw.text(
+                (badge_x + (badge_d - n_w) // 2,
+                 py + (badge_d - n_h) // 2 - 2),
+                num_str, font=num_font, fill=(255, 255, 255, 255),
+            )
+
+            # 文本(自动换行 1-2 行)
+            text_x = badge_x + badge_d + 14
+            max_w_chars = 14
+            wrapped = _wrap_cn(point, max_w_chars)[:2]
+            for j, wline in enumerate(wrapped):
+                draw.text(
+                    (text_x, py + j * int(bullet_size * 1.2)),
+                    wline, font=bullet_font, fill=(60, 60, 70, 255),
+                )
+            py += int(badge_d * 1.7)
+
+        # ----- 底部 brand 角标 -----
+        brand_size = W // 50
+        brand_font = ImageFont.truetype(reg, brand_size) if reg else ImageFont.load_default()
+        draw.text(
+            (margin + int(W * 0.05), H - margin - brand_size - 14),
+            "—— 收藏起来慢慢看 ——",
+            font=brand_font, fill=(150, 150, 160, 255),
+        )
+
+        return Image.alpha_composite(img, overlay)
+
+
+# =========================================================
+#  Template 6: 治愈语录卡(治愈系主打)
+# =========================================================
+
+class QuoteCardTemplate(PosterTemplate):
+    name = "quote_card"
+    description = "大段衬线字体居中 + 风景底图 + 顶部署名"
+    suitable_for = "治愈语录主打模板:情感/共鸣/晚安/毒鸡汤类"
+
+    def render(self, base_img, headline, subtitle="—— 致 屏幕前的你"):
+        img = base_img.convert("RGBA")
+        W, H = img.size
+
+        # 整体压暗,突出文字(treat 底图为氛围)
+        dark = Image.new("RGBA", img.size, (0, 0, 0, 80))
+        img = Image.alpha_composite(img, dark)
+
+        # 中间区域再加更深的渐变(让文字超清晰)
+        gradient = Image.new("RGBA", img.size, (0, 0, 0, 0))
+        gd = ImageDraw.Draw(gradient)
+        for y in range(H):
+            # 中间最深,两边渐隐
+            t = 1.0 - abs(y - H/2) / (H/2)
+            alpha = int(70 * t)
+            gd.line([(0, y), (W, y)], fill=(0, 0, 0, alpha))
+        img = Image.alpha_composite(img, gradient)
+
+        overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
+        draw = ImageDraw.Draw(overlay)
+
+        reg = find_regular_font()
+        bold = find_bold_font() or reg
+
+        # ----- 顶部署名 / 引文符 -----
+        sub_size = W // 40
+        sub_font = ImageFont.truetype(reg, sub_size) if reg else ImageFont.load_default()
+        sub_bbox = draw.textbbox((0, 0), subtitle, font=sub_font)
+        sub_w = sub_bbox[2] - sub_bbox[0]
+        draw.text(((W - sub_w) // 2, int(H * 0.18)),
+                  subtitle, font=sub_font,
+                  fill=(255, 255, 255, 200))
+
+        # 大引号装饰
+        quote_size = W // 8
+        quote_font = ImageFont.truetype(bold, quote_size) if bold else ImageFont.load_default()
+        draw.text((int(W * 0.10), int(H * 0.28)),
+                  '"', font=quote_font, fill=(255, 255, 255, 180))
+
+        # ----- 主语录(自动多行) -----
+        font_size = W // 16
+        font = ImageFont.truetype(reg, font_size) if reg else ImageFont.load_default()
+        max_chars = 14
+        lines = _wrap_cn(headline, max_chars)
+        line_height = int(font_size * 1.7)
+        total_h = line_height * len(lines)
+        y_start = int(H * 0.42) - total_h // 2
+
+        for i, line in enumerate(lines):
+            bbox = draw.textbbox((0, 0), line, font=font)
+            text_w = bbox[2] - bbox[0]
+            x = (W - text_w) / 2
+            y = y_start + i * line_height
+            # 柔和阴影
+            for dx, dy, a in [(2, 2, 80)]:
+                draw.text((x + dx, y + dy), line, font=font,
+                          fill=(0, 0, 0, a))
+            draw.text((x, y), line, font=font,
+                      fill=(255, 255, 255, 255))
+
+        # 结尾引号(右下)
+        end_quote_y = y_start + total_h + int(font_size * 0.2)
+        draw.text((W - int(W * 0.18), end_quote_y - quote_size // 3),
+                  '"', font=quote_font, fill=(255, 255, 255, 180))
+
+        # ----- 底部细线装饰 -----
+        line_y = int(H * 0.85)
+        draw.line([(int(W * 0.35), line_y), (int(W * 0.65), line_y)],
+                  fill=(255, 255, 255, 150), width=1)
+
+        return Image.alpha_composite(img, overlay)
+
+
+# =========================================================
 #  Template Registry
 # =========================================================
 
 TEMPLATE_REGISTRY: Dict[str, PosterTemplate] = {
+    "knowledge_card": KnowledgeCardTemplate(),     # 知识博主主打 ⭐
+    "quote_card": QuoteCardTemplate(),             # 治愈语录主打 ⭐
     "center_bold": CenterBoldTemplate(),
     "top_label": TopLabelTemplate(),
     "minimalist": MinimalistTemplate(),

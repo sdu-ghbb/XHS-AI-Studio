@@ -35,6 +35,11 @@ MediaCrawler 对接说明（方案一第 1 步）：
 
 import os
 import sys
+# Force UTF-8 for Windows console
+if sys.platform == 'win32':
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+
 import json
 import argparse
 from pathlib import Path
@@ -171,10 +176,27 @@ def main():
     elif args.input:
         print(f"[build_kb] 模式：从 {args.input} 构建")
         with open(args.input, "r", encoding="utf-8") as f:
-            raw = json.load(f)
-        # MediaCrawler 导出可能是 list 或 {data: [...]}
-        if isinstance(raw, dict):
-            raw = raw.get("data") or raw.get("notes") or []
+            content = f.read().strip()
+
+        # 尝试 JSONL（每行一个 JSON 对象）—— MediaCrawler 默认输出格式
+        raw = []
+        if content.startswith("{"):
+            for line in content.split("\n"):
+                line = line.strip()
+                if line:
+                    try:
+                        raw.append(json.loads(line))
+                    except json.JSONDecodeError:
+                        pass
+
+        # 如果 JSONL 解析无结果，尝试整文件 JSON（数组或对象）
+        if not raw:
+            data = json.loads(content)
+            if isinstance(data, list):
+                raw = data
+            elif isinstance(data, dict):
+                raw = data.get("data") or data.get("notes") or []
+
         notes = _normalize_mediacrawler(raw)
         print(f"[build_kb] 归一化后有效笔记 {len(notes)} 篇")
         build(notes, append=args.append)
