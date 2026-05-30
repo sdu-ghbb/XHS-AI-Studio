@@ -66,6 +66,15 @@ BANNED_CATEGORIES = {
 #  替换建议映射（命中即给出可用的安全替代词）
 # =========================================================
 
+# ---- 垂类上下文豁免：这些词在本项目的非医疗垂直中是正常用语 ----
+CONTEXT_WHITELIST = {
+    "healing": ["治愈"],       # 治愈语录/治愈系 → 情感内容，不是医疗宣称
+}
+# "治愈" 在本 App 里永远是情感内容，非医疗场景 → 全局豁免
+HEALING_CONTEXT_SIGNALS = ["语录", "治愈", "温柔", "情感", "共鸣", "晚安", "深夜", "文案", "释怀", "独居", "失眠"]
+# usage: 调用 check_compliance(text, context="healing") 时自动跳过上述词
+
+
 REPLACEMENT_HINTS = {
     "最": "可改为「很」「超」「特别」",
     "第一": "可改为「数一数二」「排得上号」",
@@ -86,22 +95,18 @@ REPLACEMENT_HINTS = {
 #  审查主函数
 # =========================================================
 
-def check_compliance(text: str) -> Dict:
+def check_compliance(text: str, context: str = "") -> Dict:
     """
     检查文案合规性
 
+    Parameters
+    ----------
+    text : str          待检查的文案
+    context : str       垂类上下文 ('knowledge'|'healing'|'')
+
     Returns
     -------
-    dict:
-        {
-          "safe": bool,                     # 是否完全合规
-          "risk_level": "高"|"中"|"低"|"无", # 风险等级
-          "violations": [                   # 命中的违禁词
-              {"word": "最好", "category": "极限词...", "hint": "..."},
-              ...
-          ],
-          "summary": str,                   # 一句话总结
-        }
+    dict: {safe, risk_level, violations, summary}
     """
     if not text:
         return {
@@ -110,9 +115,13 @@ def check_compliance(text: str) -> Dict:
         }
 
     violations: List[Dict] = []
+    whitelist = CONTEXT_WHITELIST.get(context, [])
+    # 自动豁免：如果文案里出现了治愈系语境信号词，"治愈"不是医疗宣称
+    if context == "healing" or any(s in text for s in HEALING_CONTEXT_SIGNALS):
+        whitelist = list(set(whitelist + ["治愈"]))
     for category, words in BANNED_CATEGORIES.items():
         for word in words:
-            if word in text:
+            if word in text and word not in whitelist:
                 # 找替换建议（支持前缀匹配）
                 hint = ""
                 for key, h in REPLACEMENT_HINTS.items():

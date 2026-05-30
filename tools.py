@@ -311,7 +311,7 @@ class SmartImagePosterTool(BaseTool):
 
 
 def _gen_image_seedream(prompt: str) -> str:
-    """字节豆包 Seedream 4.0 T2I，返回图片 URL"""
+    """字节豆包 Seedream 5.0 T2I，返回图片 URL"""
     if not config.doubao_api_key:
         raise RuntimeError("DOUBAO_API_KEY 未配置")
     data = _request_with_retry(
@@ -323,10 +323,9 @@ def _gen_image_seedream(prompt: str) -> str:
         json_body={
             "model": config.doubao_seedream_model,
             "prompt": prompt,
-            "size": "1024x1024",
+            "size": "2K",            # Seedream 5.0 最低要求 3686400px，1024x1024 太小
             "response_format": "url",
-            "watermark": False,
-            # 注：guidance_scale 仅 Seedream 3.0 支持，4.0 取消该参数
+            "watermark": True,
         },
         timeout=120,
         max_retries=2,
