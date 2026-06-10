@@ -45,7 +45,7 @@ class Config:
     siliconflow_base_url: str = "https://api.siliconflow.cn/v1"
 
     # ======== 模型 ID ========
-    deepseek_chat_model: str = "deepseek-chat"
+    deepseek_chat_model: str = "deepseek-v4-pro"
     qianwen_embedding_model: str = "text-embedding-v3"
     siliconflow_image_model: str = "Kwai-Kolors/Kolors"
 
