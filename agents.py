@@ -460,11 +460,11 @@ from langgraph.graph import StateGraph, END
 _HEADLINE_SYSTEM = (
     "你是小红书爆款标题专家。根据用户给的话题，生成 3 个不同风格的标题。\n\n"
     "规则：\n"
-    "  · 每个标题 ≤20 字（含标点），有吸引力但不夸张\n"
-    "  · 3 个标题从不同角度切入（经验分享 / 干货总结 / 避坑提醒）\n"
+    "  · 每个标题 ≤16 字，有吸引力但不夸张\n"
+    "  · 3 个标题围绕同一话题从不同写法切入（如：清单推荐 / 经验分享 / 攻略指南）\n"
+    "  · ⚠️ 话题内容以用户输入为准，不要自行改成「避坑」「踩雷」等负面角度\n"
     "  · 口语化，像真人写的，别像营销号\n"
-    "  · 不要编造具体数字和细节（如'双非''3个大坑'这种用户没说就别编）\n"
-    "  · 紧扣话题，不要跑题\n\n"
+    "  · 不要编造用户没说的细节\n\n"
     "严格按格式输出：\n"
     "标题1: xxx\n"
     "标题2: xxx\n"
@@ -473,7 +473,7 @@ _HEADLINE_SYSTEM = (
 
 def generate_headlines(topic: str) -> list:
     """选题 → 3 个不同风格的标题"""
-    resp = _llm_call(_HEADLINE_SYSTEM, f"话题：{topic}\n请为这个话题生成 3 个爆款标题。", temperature=0.9)
+    resp = _llm_call(_HEADLINE_SYSTEM, f"话题：{topic}\n请为这个话题生成 3 个爆款标题。", temperature=0.8)
     headlines = []
     for m in re.finditer(r'标题\s*\d\s*[：:]\s*(.+?)(?:\n|$)', resp):
         h = m.group(1).strip().rstrip("。，, ")
