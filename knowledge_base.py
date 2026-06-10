@@ -95,15 +95,13 @@ class ShadowKnowledgeBase:
     # ---------- 加载 ----------
     def _load(self):
         kb_path = Path(config.kb_file)
-        seed_path = Path(config.seed_file)
 
-        # 1. 优先加载已建好的向量库
+        # 加载向量库
         if kb_path.exists():
             try:
                 with open(kb_path, "r", encoding="utf-8") as f:
-                    data = json.load(f)  # 文件中为字符串, 无法识别为 JSON 格式
+                    data = json.load(f)
                 notes = data.get("notes", [])
-                # 校验是否真的有向量
                 if notes and notes[0].get("embedding"):
                     self.notes = notes
                     self.meta = data.get("meta", {})
@@ -114,23 +112,9 @@ class ShadowKnowledgeBase:
             except Exception as e:
                 print(f"[ShadowKB] 向量库加载失败: {e}")
 
-        # 2. 只有种子库
-        if seed_path.exists():
-            try:
-                with open(seed_path, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                self.notes = data.get("notes", [])
-                self.meta = data.get("meta", {})
-                self.mode = "keyword"
-                print(f"[ShadowKB] ⚠️ 仅种子库（无向量），关键词模式："
-                      f"{len(self.notes)} 篇。建议运行 build_kb.py 构建向量库。")
-                return
-            except Exception as e:
-                print(f"[ShadowKB] 种子库加载失败: {e}")
-
-        # 3. 空
+        # 空
         self.mode = "none"
-        print("[ShadowKB] ❌ 未发现任何题库，调用方需降级到 Bocha")
+        print("[ShadowKB] ❌ 未发现题库，调用方需降级到 Bocha")
 
     def is_ready(self) -> bool:
         return self.mode in ("vector", "keyword") and len(self.notes) > 0
