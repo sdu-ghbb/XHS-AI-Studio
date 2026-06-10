@@ -248,16 +248,23 @@ def copywriter_node(state: GraphState) -> GraphState:
     if feedback:
         prev = state.get("copy_output", "")
         parts.append(
-            f"\n===== ⚠️ 重写任务 =====\n"
-            f"上一版被审核员驳回，评分不达标。以下是问题：\n{feedback}\n"
-            f"===== 被驳回的原文（请避免同样问题）=====\n{prev[:800]}\n"
-            f"请重新撰写一篇更好的，不要重复被驳回的内容。"
+            f"\n===== ⚠️ 重写任务（逐一改正以下问题）=====\n"
+            f"{feedback}\n"
+            f"===== 修改要求 =====\n"
+            f"1. 逐条对照上面的问题，每一条都要针对性修改\n"
+            f"2. 如果问题是「事实有误」，删除编造的内容，改用资料里的真实信息\n"
+            f"3. 如果问题是「不够吸引人」，改标题和开头，加钩子\n"
+            f"4. 如果问题是「格式不对」，严格按格式要求输出\n"
+            f"5. 不要只是换几个词，要真正解决指出的问题\n"
+            f"===== 被驳回的原文 =====\n{prev[:600]}\n"
+            f"请重新写一篇。"
         )
 
     user = "\n".join(parts)
 
-    # ---- 流式写文案 ----
-    copy_text = _llm_call(_COPY_SYSTEM, user, temperature=0.85)
+    # 重写时降低温度，更聚焦修改而非随机发挥
+    _temp = 0.5 if feedback else 0.85
+    copy_text = _llm_call(_COPY_SYSTEM, user, temperature=_temp)
 
     # 提取海报标题
     headline = ""
@@ -296,7 +303,9 @@ _CRITIC_SYSTEM = (
     "严格按以下格式输出（不要任何其他文字）：\n"
     "综合评分: X/100\n"
     "改进建议:\n"
-    "- 具体到能照着改的建议（事实有误的要指出；评分 >= 85 写「无需修改」）"
+    "- 每条建议必须具体到能直接照着改（如「把XXX改成YYY」「删除XXX」「增加XXX内容」）\n"
+    "- 事实有误的必须指出原文哪句话错了、正确的是什么\n"
+    "- 评分 >= 85 写「无需修改」"
 )
 
 def critic_node(state: GraphState) -> GraphState:
