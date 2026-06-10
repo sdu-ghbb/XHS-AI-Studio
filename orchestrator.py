@@ -143,7 +143,7 @@ class TaskManager:
         if not info:
             return
 
-        max_attempts = 2 if enable_retry else 1
+        max_attempts = 3 if enable_retry else 1
 
         def _emit(event: str, data: dict):
             """向 SSE 队列推送事件"""

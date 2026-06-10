@@ -494,8 +494,8 @@ def build_graph() -> StateGraph:
 
     def _after_critic(state: GraphState) -> str:
         score = state.get("score", 0)
-        attempt = state.get("attempt", 1)
-        max_attempts = state.get("max_attempts", 2)
+        attempt = state.get("attempt", 0)
+        max_attempts = state.get("max_attempts", 3)
         if score >= config.quality_threshold or attempt >= max_attempts:
             return "visual"
         return "copywriter"
@@ -522,7 +522,7 @@ def get_graph():
 def run_graph(
     topic: str,
     enable_carousel: bool = False,
-    max_attempts: int = 2,
+    max_attempts: int = 3,
     on_event: Optional[Callable] = None,
 ) -> dict:
     """
