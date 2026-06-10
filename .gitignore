@@ -1,0 +1,27 @@
+# 凭证（绝不入库）
+.env
+.env.local
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+venv/
+
+# 产物
+outputs/
+fonts/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 影子题库构建产物（体积大，本地构建后 scp 上传，不入库）
+kb/shadow_kb.json

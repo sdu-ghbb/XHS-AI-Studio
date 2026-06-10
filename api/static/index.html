@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🌸 小红书 AI Studio</title>
+<style>
+  :root {
+    --bg: #080c1a;
+    --surface: rgba(18, 22, 48, 0.7);
+    --border: rgba(255,255,255,0.06);
+    --accent1: #ff6b9d;
+    --accent2: #c06bff;
+    --accent3: #6b9dff;
+    --text: #e2e6f2;
+    --muted: #6b7094;
+    --green: #00d68f;
+    --red: #ff6b6b;
+    --radius: 16px;
+    --radius-sm: 10px;
+    --shadow-glow: 0 0 40px rgba(192,107,255,0.08);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text); min-height: 100vh; display: flex; flex-direction: column;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(ellipse 80% 60% at 20% 10%, rgba(192,107,255,0.06), transparent),
+      radial-gradient(ellipse 60% 80% at 80% 90%, rgba(255,107,157,0.05), transparent),
+      radial-gradient(ellipse 40% 40% at 50% 50%, rgba(107,157,255,0.04), transparent);
+  }
+
+  /* Header */
+  header {
+    text-align: center; padding: 3rem 1rem 1.5rem; position: relative; z-index: 1;
+  }
+  header h1 {
+    font-size: clamp(1.8rem, 5vw, 2.6rem); font-weight: 800; letter-spacing: -0.5px;
+    background: linear-gradient(135deg, var(--accent1) 0%, var(--accent2) 40%, var(--accent3) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    filter: drop-shadow(0 0 20px rgba(192,107,255,0.3));
+  }
+  header .sub { color: var(--muted); font-size: .9rem; margin-top: .5rem; letter-spacing: 1px; }
+
+  /* Step indicator */
+  .steps {
+    display: flex; justify-content: center; align-items: center; gap: 0;
+    padding: 0 1rem 2rem; flex-wrap: wrap; position: relative; z-index: 1;
+  }
+  .step-pill {
+    padding: 7px 20px; border-radius: 24px; font-size: 13px; font-weight: 600;
+    background: rgba(255,255,255,0.04); color: var(--muted);
+    transition: all .4s cubic-bezier(0.4,0,0.2,1);
+  }
+  .step-arrow { color: rgba(255,255,255,0.15); font-size: 14px; margin: 0 2px; }
+  .step-pill.active {
+    background: linear-gradient(135deg, var(--accent1), var(--accent2));
+    color: #fff; box-shadow: 0 4px 20px rgba(192,107,255,0.35);
+  }
+  .step-pill.done {
+    background: rgba(0,214,143,0.1); color: var(--green);
+  }
+
+  /* Main */
+  main {
+    flex: 1; max-width: 880px; width: 100%; margin: 0 auto; padding: 0 1.25rem 3rem;
+    position: relative; z-index: 1;
+  }
+
+  /* Card — glassmorphism */
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 1.75rem; margin-bottom: 1rem;
+    box-shadow: var(--shadow-glow);
+  }
+  .card h2 { font-size: 1.15rem; font-weight: 700; margin-bottom: 1rem; letter-spacing: -0.3px; }
+
+  /* Input */
+  input[type="text"] {
+    width: 100%; padding: .85rem 1.1rem;
+    background: rgba(0,0,0,0.25); color: var(--text);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-bottom: 2px solid rgba(255,255,255,0.08);
+    border-radius: var(--radius-sm) var(--radius-sm) 2px 2px;
+    font-size: .95rem; outline: none; transition: all .25s; font-family: inherit;
+  }
+  input:focus {
+    border-color: rgba(255,255,255,0.08);
+    border-bottom-color: var(--accent2);
+    box-shadow: 0 2px 12px rgba(192,107,255,0.15);
+  }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: .7rem 2.2rem; border: none; border-radius: var(--radius-sm);
+    font-size: .9rem; font-weight: 700; cursor: pointer; color: #fff;
+    background: linear-gradient(135deg, var(--accent1) 0%, var(--accent2) 100%);
+    box-shadow: 0 4px 18px rgba(192,107,255,0.25);
+    transition: all .25s cubic-bezier(0.4,0,0.2,1);
+  }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(192,107,255,0.4); }
+  .btn:active { transform: scale(0.97); transition: transform .1s; }
+  .btn:disabled { opacity: .4; cursor: not-allowed; transform: none; box-shadow: none; filter: grayscale(40%); }
+  .btn-outline {
+    background: transparent; border: 1.5px solid rgba(192,107,255,0.4);
+    box-shadow: none; color: var(--accent2);
+  }
+  .btn-outline:hover { border-color: var(--accent2); background: rgba(192,107,255,0.06); box-shadow: 0 4px 16px rgba(192,107,255,0.15); }
+  .btn-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: .9rem; }
+
+  /* Headline cards */
+  .headline-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .8rem; }
+  @media (max-width: 640px) { .headline-grid { grid-template-columns: 1fr; } }
+  .head-card {
+    background: rgba(255,255,255,0.03); border: 1.5px solid rgba(255,255,255,0.06);
+    border-radius: var(--radius); padding: 1.25rem; cursor: pointer;
+    transition: all .3s cubic-bezier(0.4,0,0.2,1); text-align: center;
+    position: relative; overflow: hidden;
+  }
+  .head-card::before {
+    content: ''; position: absolute; inset: 0; opacity: 0; transition: opacity .3s;
+    background: radial-gradient(circle at center, rgba(192,107,255,0.08), transparent);
+  }
+  .head-card:hover { border-color: var(--accent2); transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+  .head-card:hover::before { opacity: 1; }
+  .head-card.selected {
+    border-color: var(--accent2);
+    background: rgba(192,107,255,0.08);
+    box-shadow: 0 0 20px rgba(192,107,255,0.2), 0 0 40px rgba(192,107,255,0.08);
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 20px rgba(192,107,255,0.2), 0 0 40px rgba(192,107,255,0.08); }
+    50% { box-shadow: 0 0 30px rgba(192,107,255,0.35), 0 0 60px rgba(192,107,255,0.15); }
+  }
+  .head-card .num {
+    color: var(--accent2); font-weight: 800; font-size: .75rem;
+    text-transform: uppercase; letter-spacing: 2px; margin-bottom: .5rem;
+    position: relative; z-index: 1;
+  }
+  .head-card .title { font-size: .95rem; font-weight: 600; line-height: 1.5; position: relative; z-index: 1; }
+
+  /* Progress */
+  .progress-wrap { margin: 1rem 0; }
+  .progress-bar {
+    height: 6px; background: rgba(255,255,255,0.06);
+    border-radius: 3px; overflow: hidden;
+  }
+  .progress-bar .fill {
+    height: 100%; border-radius: 3px;
+    background: linear-gradient(90deg, var(--accent1), var(--accent2), var(--accent3));
+    transition: width .4s ease;
+    box-shadow: 0 0 8px rgba(192,107,255,0.2);
+  }
+  .progress-info {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: .82rem; margin-bottom: 6px;
+  }
+  .progress-info .phase { color: var(--text); font-weight: 700; }
+
+  /* Phase timeline */
+  .phase-timeline { margin: .8rem 0; padding: .5rem .8rem; background: rgba(0,0,0,0.15); border-radius: var(--radius-sm); }
+  .phase-row {
+    display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: .85rem;
+    transition: all .4s;
+  }
+  .phase-row .icon { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: .75rem; border-radius: 50%; background: rgba(255,255,255,0.04); flex-shrink: 0; }
+  .phase-row .label { flex: 1; font-weight: 500; }
+  .phase-row .check { margin-left: auto; padding-left: 8px; font-weight: 700; font-size: .75rem; opacity: 0; transform: scale(0); transition: all .35s cubic-bezier(0.34,1.56,0.64,1); }
+  .phase-row.pending { opacity: .35; }
+  .phase-row:not(.pending) .icon { background: rgba(0,214,143,0.12); }
+  .phase-row:not(.pending) .check { opacity: 1; transform: scale(1); color: var(--green); }
+  .phase-row:not(.pending) { animation: fadeInPhase .5s ease; }
+  @keyframes fadeInPhase { from { opacity: .35; } to { opacity: 1; } }
+
+  /* Log group */
+  .log-group { margin-top: .6rem; }
+  .log-group summary {
+    cursor: pointer; color: var(--accent3); font-size: .8rem; font-weight: 600;
+    padding: 6px 0; user-select: none; transition: color .2s;
+  }
+  .log-group summary:hover { color: var(--accent2); }
+  .log-group .body {
+    background: rgba(0,0,0,0.2); border-radius: 8px;
+    padding: .7rem .9rem; margin-top: 4px;
+    font-size: .76rem; font-family: "SF Mono", "Cascadia Code", Consolas, monospace;
+    line-height: 1.65; max-height: 180px; overflow-y: auto;
+    white-space: pre-wrap; word-break: break-all; color: var(--muted);
+    border: 1px solid rgba(255,255,255,0.03);
+  }
+
+  /* Result */
+  .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+  @media (max-width: 680px) { .result-grid { grid-template-columns: 1fr; } }
+  .poster-img {
+    width: 100%; border-radius: var(--radius-sm);
+    border: 1px solid rgba(192,107,255,0.15);
+    box-shadow: 0 0 20px rgba(192,107,255,0.06), 0 4px 12px rgba(0,0,0,0.3);
+    transition: transform .3s, box-shadow .3s; cursor: pointer;
+  }
+  .poster-img:hover { transform: scale(1.02); box-shadow: 0 0 30px rgba(192,107,255,0.15), 0 8px 20px rgba(0,0,0,0.4); }
+  .poster-label { font-size: .85rem; font-weight: 700; margin-bottom: .5rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+  .copy-box {
+    background: rgba(0,0,0,0.2); border: 1px solid var(--border);
+    border-left: 3px solid var(--accent2);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 1.1rem 1.1rem 1.1rem 1.3rem;
+    font-size: .9rem; line-height: 1.75; white-space: pre-wrap;
+    max-height: 480px; overflow-y: auto;
+    scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.08) transparent;
+  }
+  .copy-box::-webkit-scrollbar { width: 4px; }
+  .copy-box::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+
+  /* Expander */
+  .expander { margin-top: .8rem; }
+  .expander details { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: .8rem 1rem; }
+  .expander summary { cursor: pointer; color: var(--accent3); font-size: .85rem; font-weight: 600; }
+  .expander .body { background: rgba(0,0,0,0.15); padding: .7rem .9rem; border-radius: 8px; font-size: .82rem; margin-top: .5rem; line-height: 1.65; white-space: pre-wrap; color: var(--muted); }
+
+  /* Score badge — circular */
+  .score-badge {
+    display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
+    width: 72px; height: 72px; border-radius: 50%; font-weight: 800;
+    font-size: 1.3rem; line-height: 1;
+  }
+  .score-badge small { font-size: .6rem; font-weight: 500; opacity: .7; margin-top: 2px; }
+  .score-good {
+    background: rgba(0,214,143,0.08); color: var(--green);
+    border: 2px solid rgba(0,214,143,0.3);
+    box-shadow: 0 0 16px rgba(0,214,143,0.1);
+  }
+  .score-meh {
+    background: rgba(255,170,0,0.08); color: #ffaa00;
+    border: 2px solid rgba(255,170,0,0.3);
+    box-shadow: 0 0 16px rgba(255,170,0,0.1);
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed; top: 1.25rem; right: 1.25rem; z-index: 999;
+    background: rgba(255,68,68,0.95); color: #fff; padding: .8rem 1.4rem;
+    border-radius: var(--radius-sm); font-size: .85rem; font-weight: 600;
+    box-shadow: 0 8px 24px rgba(255,68,68,0.3); display: none;
+    backdrop-filter: blur(12px);
+  }
+  .toast.show { display: block; animation: fadeInUp .35s cubic-bezier(0.4,0,0.2,1); }
+  @keyframes fadeInUp { from{opacity:0;transform:translateY(-12px)} to{opacity:1;transform:translateY(0)} }
+
+  .hidden { display: none !important; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 1rem 0; }
+
+  /* Footer */
+  .chosen-badge {
+    display: inline-block; padding: 6px 14px; background: rgba(0,214,143,0.08);
+    border: 1px solid rgba(0,214,143,0.15); border-radius: 20px;
+    font-size: .82rem; color: var(--green); margin-bottom: .8rem;
+  }
+
+  /* Sub-posters grid */
+  .subposter-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: .5rem; margin-top: .8rem; }
+  @media (max-width: 480px) { .subposter-grid { grid-template-columns: repeat(2,1fr); } }
+  .subposter-grid img { width: 100%; border-radius: 8px; border: 1px solid var(--border); transition: transform .2s; }
+  .subposter-grid img:hover { transform: scale(1.03); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🌸 小红书 AI Studio</h1>
+  <p class="sub">AI 驱动 · 风格学习 · 图文生成</p>
+</header>
+
+<!-- Step indicator -->
+<div class="steps">
+  <span class="step-pill active" id="pill-1">1️⃣ 选题</span>
+  <span class="step-arrow">›</span>
+  <span class="step-pill" id="pill-2">2️⃣ 标题</span>
+  <span class="step-arrow">›</span>
+  <span class="step-pill" id="pill-3">3️⃣ 生成</span>
+  <span class="step-arrow">›</span>
+  <span class="step-pill" id="pill-4">4️⃣ 成品</span>
+</div>
+
+<main>
+  <!-- ============ Step 1: 选题 ============ -->
+  <section id="step-1" class="card">
+    <h2>🎯 Step 1 · 输入你的选题</h2>
+    <input type="text" id="topic-input" placeholder="例: 考研复试 / 副业搞钱 / 深夜失眠 / 职场困惑 / 读书笔记">
+    <div class="btn-row">
+      <button class="btn" id="btn-headlines" onclick="genHeadlines()">➡️ 生成标题候选</button>
+    </div>
+    <p style="color:var(--muted);font-size:.8rem;margin-top:.6rem">输入话题，AI 帮你生成 3 个爆款标题供选择</p>
+  </section>
+
+  <!-- ============ Step 2: 选标题 ============ -->
+  <section id="step-2" class="card hidden">
+    <h2>🎯 Step 2 · 选择标题方向</h2>
+    <div id="headline-grid" class="headline-grid"></div>
+    <div class="btn-row">
+      <button class="btn" id="btn-confirm-headline" disabled onclick="confirmHeadline()">✅ 确认并生成</button>
+      <button class="btn btn-outline" onclick="retryHeadlines()">🔄 重新生成</button>
+      <button class="btn btn-outline" onclick="goToStep(1)">↩️ 改选题</button>
+    </div>
+  </section>
+
+  <!-- ============ Step 3: 生成 ============ -->
+  <section id="step-3" class="card hidden">
+    <h2>🚀 Step 3 · AI 智能生成</h2>
+    <div id="chosen-headline-display"></div>
+
+    <!-- Options -->
+
+    <div class="btn-row">
+      <button class="btn" id="btn-launch" onclick="launchGen()">🚀 开始生成</button>
+      <button class="btn btn-outline" onclick="goToStep(2)">↩️ 选其他标题</button>
+    </div>
+
+    <div id="gen-progress" class="hidden" style="margin-top:1rem">
+      <!-- 进度条 -->
+      <div class="progress-wrap">
+        <div class="progress-info">
+          <span class="phase" id="progress-phase">🚀 启动中...</span>
+          <span class="elapsed" id="progress-elapsed">0 秒</span>
+        </div>
+        <div class="progress-bar"><div class="fill" id="progress-fill" style="width:0%"></div></div>
+      </div>
+
+      <!-- 阶段时间线 -->
+      <div class="phase-timeline" id="phase-timeline">
+        <div class="phase-row pending" id="phase-search"><span class="icon">🔍</span><span class="label">资料搜集</span><span class="check"></span></div>
+        <div class="phase-row pending" id="phase-copy"><span class="icon">✍️</span><span class="label">金牌文案撰写</span><span class="check"></span></div>
+        <div class="phase-row pending" id="phase-critic"><span class="icon">🔎</span><span class="label">质量审核评分</span><span class="check"></span></div>
+        <div class="phase-row pending" id="phase-visual"><span class="icon">🎨</span><span class="label">海报生成</span><span class="check"></span></div>
+      </div>
+
+      <!-- 可折叠运行日志 -->
+      <details class="log-group" id="log-group">
+        <summary>📋 运行日志 · <span id="log-count">0</span> 条</summary>
+        <div class="body" id="log-stream"></div>
+      </details>
+    </div>
+  </section>
+
+  <!-- ============ Step 4: 成品 ============ -->
+  <section id="step-4" class="card hidden">
+    <h2>🎁 Step 4 · 成品交付</h2>
+
+    <div id="score-area" style="margin-bottom:.6rem;text-align:center"></div>
+    <div id="critic-expander" class="expander hidden">
+      <details><summary>💡 改进建议（可选参考）</summary>
+        <div class="body" id="critic-body"></div>
+      </details>
+    </div>
+    <hr style="border-color:var(--border);margin:1rem 0">
+
+    <div class="result-grid">
+      <div>
+        <p class="poster-label">🖼️ 海报封面</p>
+        <div id="poster-area"><p style="color:var(--muted)">加载中...</p></div>
+        <div id="sub-posters"></div>
+      </div>
+      <div>
+        <p class="poster-label">📝 文案</p>
+        <div class="copy-box" id="copy-text">加载中...</div>
+      </div>
+    </div>
+
+    <div class="btn-row" style="margin-top:1rem">
+      <button class="btn" onclick="resetAll()">🔄 再做一篇</button>
+    </div>
+  </section>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============ State ============
+const API = '/api/v1';
+let chosenHeadline = null;
+let selectedHeadlineIdx = -1;
+let currentStep = 1;
+let startTs = 0;
+
+// ============ Toast ============
+function showToast(msg, ms=4000) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), ms);
+}
+
+// ============ Step navigation ============
+function goToStep(n) {
+  currentStep = n;
+  ['step-1','step-2','step-3','step-4'].forEach((id,i) => {
+    document.getElementById(id).classList.toggle('hidden', i+1 !== n);
+  });
+  ['pill-1','pill-2','pill-3','pill-4'].forEach((id,i) => {
+    const p = document.getElementById(id);
+    p.classList.remove('active','done');
+    if (i+1 === n) p.classList.add('active');
+    if (i+1 < n) p.classList.add('done');
+  });
+}
+
+// ============ Step 1 → 2: Headlines ============
+async function genHeadlines() {
+  const topic = document.getElementById('topic-input').value.trim();
+  if (!topic) { showToast('请先输入选题'); return; }
+
+  const btn = document.getElementById('btn-headlines');
+  btn.disabled = true; btn.textContent = '⏳ 生成中...';
+
+  try {
+    const resp = await fetch(`${API}/headlines`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ topic }),
+    });
+    const data = await resp.json();
+    if (!data.headlines || data.headlines.length === 0) {
+      showToast(data.error || '标题生成失败，请重试');
+      return;
+    }
+
+    // Render headline cards
+    const grid = document.getElementById('headline-grid');
+    grid.innerHTML = data.headlines.map((h, i) => `
+      <div class="head-card" onclick="selectHeadline(${i}, '${escapeHtml(h)}')" id="hcard-${i}">
+        <div class="num">标题 ${i+1}</div>
+        <div class="title">${escapeHtml(h)}</div>
+      </div>
+    `).join('');
+    selectedHeadlineIdx = -1; chosenHeadline = null;
+    document.getElementById('btn-confirm-headline').disabled = true;
+    goToStep(2);
+  } catch(e) {
+    showToast('网络错误: ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = '➡️ 生成标题候选';
+  }
+}
+
+function selectHeadline(idx, text) {
+  selectedHeadlineIdx = idx; chosenHeadline = text;
+  document.querySelectorAll('.head-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('hcard-' + idx).classList.add('selected');
+  document.getElementById('btn-confirm-headline').disabled = false;
+}
+
+function retryHeadlines() {
+  chosenHeadline = null; selectedHeadlineIdx = -1;
+  genHeadlines();
+}
+
+// ============ Step 2 → 3: Confirm ============
+function confirmHeadline() {
+  if (!chosenHeadline) { showToast('请先选择一个标题'); return; }
+  document.getElementById('chosen-headline-display').innerHTML =
+    `<div class="chosen-badge">✅ 已选标题：<strong>${escapeHtml(chosenHeadline)}</strong></div>`;
+  goToStep(3);
+}
+
+// ============ Step 3 → 4: Launch ============
+const PHASE_ORDER = { search: 0, copy: 1, critic: 2, visual: 3 };
+const PHASE_PCT = { search: 15, copy: 40, critic: 65, visual: 90 };
+
+function markPhaseById(phase, label) {
+  const id = 'phase-' + phase;
+  const el = document.getElementById(id);
+  if (el) { el.classList.remove('pending'); el.querySelector('.check').textContent = '✅'; }
+  const idx = PHASE_ORDER[phase] || 0;
+  const pct = PHASE_PCT[phase] || (idx * 25);
+  document.getElementById('progress-fill').style.width = pct + '%';
+  const s = Math.floor((Date.now() - startTs) / 1000);
+  document.getElementById('progress-phase').textContent = (label || '') + ' · ' + s + '秒';
+}
+
+async function launchGen() {
+  // Reset UI
+  document.getElementById('gen-progress').classList.remove('hidden');
+  document.getElementById('btn-launch').disabled = true;
+  document.getElementById('log-stream').innerHTML = '';
+  document.getElementById('progress-fill').style.width = '0%';
+  document.getElementById('log-count').textContent = '0';
+  document.getElementById('log-group').open = false;
+
+  // Reset phase timeline
+  document.querySelectorAll('.phase-row').forEach(r => { r.classList.add('pending'); r.querySelector('.check').textContent = ''; });
+
+  let topic = document.getElementById('topic-input').value.trim();
+  if (chosenHeadline) {
+    topic += '\n\n⚠️ 用户已选定以下标题，请确保产出完全围绕此标题展开：\n【选定标题】' + chosenHeadline;
+  }
+
+  const enableCarousel = true;
+  const enableRetry = true;
+  startTs = Date.now();
+  let taskOutputs = {};
+  let finalScore = null;
+  let logCount = 0;
+
+  function updateElapsed() {
+    const s = Math.floor((Date.now() - startTs) / 1000);
+    document.getElementById('progress-elapsed').textContent = s + ' 秒';
+  }
+
+  try {
+    // 1. Submit task
+    const resp = await fetch(`${API}/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ brief: topic, enable_carousel: enableCarousel, enable_retry: enableRetry }),
+    });
+    const { task_id } = await resp.json();
+    if (!task_id) { throw new Error('未获取到 task_id'); }
+
+    // 2. SSE stream
+    const streamResp = await fetch(`${API}/generate/stream/${task_id}`);
+    const reader = streamResp.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    const logEl = document.getElementById('log-stream');
+
+    // Elapsed timer
+    const timerId = setInterval(updateElapsed, 1000);
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const dataStr = line.slice(6);
+        if (!dataStr || dataStr.startsWith(':')) continue;
+        try {
+          const ev = JSON.parse(dataStr);
+          const etype = ev.event;
+          const evData = ev.data || {};
+          const content = evData.content || evData.summary || evData.message || '';
+          const ts = evData.ts || '';
+
+          // 显式阶段事件 → 直接更新时间线
+          if (etype === 'phase') {
+            markPhaseById(evData.phase, evData.label);
+            updateElapsed();
+            continue;
+          }
+
+          // 进度条平滑推进
+          updateElapsed();
+
+          // --- 日志收集（可折叠） ---
+          if (etype === 'log' || etype === 'step') {
+            logCount++;
+            const icon = etype === 'step' ? '🔹' : '📌';
+            const cls = etype === 'step' ? 'step' : (evData?.type === 'done' ? 'done' : '');
+            logEl.innerHTML += `<div class="line ${cls}">${icon} [${ts}] ${escapeHtml(content)}</div>`;
+            document.getElementById('log-count').textContent = logCount;
+          }
+
+          if (etype === 'done') {
+            document.getElementById('progress-fill').style.width = '100%';
+            document.getElementById('progress-phase').textContent = '✅ 文案完成';
+            if (evData?.task_outputs) taskOutputs = evData.task_outputs;
+            if (evData?.final_score != null) finalScore = evData.final_score;
+            // 标亮视觉阶段
+            markPhaseById('visual');
+          }
+
+          if (etype === 'error') {
+            logEl.innerHTML += `<div class="line error">❌ ${escapeHtml(content)}</div>`;
+            document.getElementById('log-group').open = true;
+            showToast('生成失败: ' + (content || '未知错误'));
+          }
+
+        } catch(e) { /* skip malformed */ }
+      }
+    }
+
+    clearInterval(timerId);
+
+    // 全部完成
+    document.getElementById('progress-fill').style.width = '100%';
+    document.getElementById('progress-phase').textContent = '✅ 全部完成';
+    document.querySelectorAll('.phase-row').forEach(r => { r.classList.remove('pending'); if (!r.querySelector('.check').textContent) r.querySelector('.check').textContent = '✅'; });
+    updateElapsed();
+
+    // 3. Get final result
+    const resultResp = await fetch(`${API}/generate/result/${task_id}`);
+    const result = await resultResp.json();
+
+    const to = result.result?.task_outputs || taskOutputs;
+    const copyRaw = to.copy || to.task_1 || '';
+    const critic = to.critic || to.task_2 || '';
+    const copyText = copyRaw
+      .replace(/\n?海报标题[:：][^\n]*/g, '')
+      .replace(/\n?分页标题[:：][^\n]*/g, '')
+      .replace(/\*\*/g, '')
+      .trim();
+
+    displayResult(copyText, critic, result.poster_paths || [], result.final_score);
+
+  } catch(e) {
+    showToast('生成过程出错: ' + e.message);
+    document.getElementById('btn-launch').disabled = false;
+    document.getElementById('log-group').open = true;
+  }
+}
+
+// ============ Step 4: Display ============
+function displayResult(copyText, criticText, posterPaths, score) {
+  // Score
+  const scoreArea = document.getElementById('score-area');
+  if (score != null) {
+    const cls = score >= 80 ? 'score-good' : 'score-meh';
+    scoreArea.innerHTML = `<span class="score-badge ${cls}">${score}<small>分</small></span>`;
+  }
+
+  // Critic
+  if (criticText && criticText.includes('改进建议') && (score == null || score < 85)) {
+    document.getElementById('critic-expander').classList.remove('hidden');
+    document.getElementById('critic-body').textContent = criticText;
+  } else {
+    document.getElementById('critic-expander').classList.add('hidden');
+  }
+
+  // Copy
+  document.getElementById('copy-text').textContent = copyText || '(文案为空)';
+
+  // Posters
+  const posterArea = document.getElementById('poster-area');
+  const subArea = document.getElementById('sub-posters');
+  posterArea.innerHTML = ''; subArea.innerHTML = '';
+
+  const covers = posterPaths.filter(p => p.toLowerCase().includes('final'));
+  const subs = posterPaths.filter(p => !p.toLowerCase().includes('final'));
+  const coverPath = covers.length > 0 ? covers[0] : (posterPaths.length > 0 ? posterPaths[0] : null);
+
+  if (coverPath) {
+    posterArea.innerHTML = `<img class="poster-img" src="/outputs/${basename(coverPath)}" alt="海报封面" onerror="this.parentElement.innerHTML='<p style=color:var(--muted)>⚠️ 海报未生成</p>'">`;
+  } else {
+    posterArea.innerHTML = '<p style="color:var(--muted)">⚠️ 未生成海报</p>';
+  }
+
+  if (subs.length > 0) {
+    subArea.innerHTML = '<p class="poster-label">📚 正文图</p><div class="subposter-grid">' +
+      subs.slice(0, 3).map(s => `<img src="/outputs/${basename(s)}" onerror="this.style.display='none'" alt="正文图">`).join('') +
+      '</div>';
+  }
+
+  goToStep(4);
+}
+
+function basename(path) {
+  return path.replace(/\\/g, '/').split('/').pop();
+}
+
+function escapeHtml(str) {
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+// ============ Reset ============
+function resetAll() {
+  chosenHeadline = null; selectedHeadlineIdx = -1;
+  document.getElementById('topic-input').value = '';
+  document.getElementById('gen-progress').classList.add('hidden');
+  document.getElementById('btn-launch').disabled = false;
+  document.getElementById('btn-confirm-headline').disabled = true;
+  goToStep(1);
+}
+
+// ============ Init ============
+goToStep(1);
+</script>
+</body>
+</html>
