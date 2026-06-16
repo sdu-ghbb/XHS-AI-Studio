@@ -4,7 +4,6 @@ TuLun AI Studio — 异步任务编排器
 桥接 LangGraph 调用和异步 SSE 推送。
 TaskManager 用 threading.Thread 执行业务逻辑，
 通过 asyncio.Queue 向 SSE 端点推送实时日志。
-LangGraph 替代 CrewAI，实现真正的 streaming 和阶段追踪。
 ===========================================
 """
 
@@ -46,22 +45,7 @@ class TaskInfo:
 # =========================================================
 
 class TaskManager:
-    """
-    任务管理器
-    ----------
-    职责：
-        1. 接收生成请求，分配 task_id
-        2. 用后台线程执行 CrewAI 流水线
-        3. 通过 asyncio.Queue 向 SSE 端点推送事件
-        4. 提供任务结果查询接口
 
-    用法：
-        mgr = TaskManager()
-        task_id = mgr.start(brief="...")
-        async for event in mgr.subscribe(task_id):
-            # SSE stream
-        result = mgr.get_result(task_id)
-    """
     def __init__(self):
         self._tasks: Dict[str, TaskInfo] = {}
         self._lock = threading.Lock()
@@ -135,18 +119,15 @@ class TaskManager:
         self,
         task_id: str,
         brief: str,
-        enable_carousel: bool,
-        enable_retry: bool,
+        enable_carousel: bool
     ):
-        """后台线程：执行 CrewAI 流水线"""
         info = self.get_info(task_id)
         if not info:
             return
 
-        max_attempts = 3 if enable_retry else 1
+        max_attempts = 3
 
         def _emit(event: str, data: dict):
-            """向 SSE 队列推送事件"""
             if self._loop and self._loop.is_running():
                 asyncio.run_coroutine_threadsafe(
                     info.queue.put({"event": event, "data": data}),

@@ -19,7 +19,10 @@ from openai import OpenAI
 
 from config import config
 from knowledge_base import get_kb
-from tools import BochaSearchTool, SmartImagePosterTool, ShadowKBTool
+from tools import bocha_search, shadow_kb_search, generate_image
+from langchain_openai import ChatOpenAI
+from langchain_core.messages import HumanMessage, ToolMessage
+from langgraph.prebuilt import ToolNode
 
 
 # =========================================================
@@ -41,7 +44,6 @@ class GraphState(TypedDict, total=False):
     poster_paths: List[str]
 
 
-# 模块级事件回调（避免 LangGraph 序列化 Callable）
 _event_cb: Optional[Callable] = None
 
 
@@ -72,7 +74,6 @@ def _llm_call(
     stream: bool = False,
     on_token: Optional[Callable] = None,
 ) -> str:
-    """调用 DeepSeek，可选 streaming"""
     client = _get_client()
     messages = [
         {"role": "system", "content": system},
@@ -102,23 +103,10 @@ def _llm_call(
 
 
 # =========================================================
-#  工具执行辅助
-# =========================================================
-
-def _run_tool(tool, query: str) -> str:
-    """同步执行 CrewAI 工具（基类 BaseTool._run）"""
-    try:
-        return tool._run(query)
-    except Exception as e:
-        return f"[工具错误] {e}"
-
-
-# =========================================================
 #  样式 RAG 预处理
 # =========================================================
 
 def _fetch_style_examples(topic: str) -> str:
-    """从影子题库检索爆款范文"""
     try:
         kb = get_kb()
         if kb.is_ready():
@@ -138,33 +126,46 @@ def research_node(state: GraphState) -> GraphState:
     topic = state["topic"]
     _emit("log", {"content": f"🔍 搜索资料中..."})
 
-    kb_tool = ShadowKBTool()
-    search_tool = BochaSearchTool()
-
     style = _fetch_style_examples(topic)
     state["style_examples"] = style
     if style:
         _emit("log", {"content": f"📚 找到 {style.count('【范文')} 篇相关范文"})
 
-    # 搜索影子题库
-    kb_result = _run_tool(kb_tool, topic)
+    # LangGraph 标准方式：LLM + bind_tools + ToolNode
+    llm = ChatOpenAI(
+        model=config.deepseek_chat_model,
+        api_key=config.deepseek_api_key,
+        base_url=config.deepseek_base_url,
+        temperature=0.3,
+    ).bind_tools([shadow_kb_search, bocha_search])
+
+    msg = llm.invoke([
+        HumanMessage(content=f"研究主题：{topic}\n请先用影子题库搜索相关范文，再搜索网络资料。")
+    ])
+
+    kb_result = ""
+    web_result = ""
+    if msg.tool_calls:
+        tool_node = ToolNode([shadow_kb_search, bocha_search])
+        tool_results = tool_node.invoke({"messages": [msg]})
+        for m in tool_results["messages"]:
+            if isinstance(m, ToolMessage):
+                if m.name == "shadow_kb_search":
+                    kb_result = m.content
+                elif m.name == "bocha_search":
+                    web_result = m.content
+
     kb_count = kb_result.count("【")
     _emit("log", {"content": f"📖 资料库检索到 {kb_count} 条相关内容"})
-
-    # 搜索网络（取 topic 第一行作为关键词，直接搜，不加无意义后缀）
-    _search_topic = topic.split("\n")[0].strip()[:50]
-    web_result = _run_tool(search_tool, _search_topic)
 
     import re as _re, requests as _req
     import trafilatura
     _fetched = ""
     _fetched_cnt = 0
-    # 优先抓新闻站/知乎，跳过垃圾站
     _good = ['news.','iqilu','zhihu','qingdaonews','qtv','sdnews','people','sina','sohu','xiaohongshu']
     _bad = ['foodmate','search.php','baike','wiki','login','signup','tag/','/search','58.com','ganji.com','sohu.com','qyer.com','mafengwo','ctrip','tuniu']
     urls_raw = list(set(_re.findall(r'https?://[^\s)\]）]+', web_result)))
     urls_raw = [u for u in urls_raw if not any(b in u for b in _bad)]
-    # 去重：http/https 同一个域名+路径视为相同
     seen, urls = set(), []
     for u in urls_raw:
         norm = _re.sub(r'^https?://', '', u)  # 去掉协议
@@ -217,6 +218,8 @@ def research_node(state: GraphState) -> GraphState:
 _COPY_SYSTEM = (
     "你是深耕小红书 3 年的金牌文案，专精爆款笔记创作。\n"
     "写作风格：口语化、有情绪、有干货、像朋友聊天。\n"
+    "系统会提供「爆款范文」供你学习——仔细体会它们的标题节奏、emoji用法、\n"
+    "分段方式、话题标签选择，然后模仿这种风格来写，但内容必须是原创的。\n"
     "每段开头用 1 个 emoji，正文 300-500 字。\n"
     "⚠️ 文案最后必须严格按以下格式输出（不要省略任何一行）：\n"
     "#话题1 #话题2 #话题3 #话题4 #话题5\n"
@@ -347,7 +350,7 @@ def critic_node(state: GraphState) -> GraphState:
 
 
 # =========================================================
-#  Node 4: Visual (Art Director)
+#  Node 4: Visual
 # =========================================================
 
 def visual_node(state: GraphState) -> GraphState:
@@ -425,14 +428,13 @@ def visual_node(state: GraphState) -> GraphState:
             _emit("log", {"content": "⚠️ 未找到分页标题，仅生成封面"})
 
     _emit("log", {"content": "🖼️ 正在生成图片，请耐心等待..."})
-    poster_tool = SmartImagePosterTool(output_dir=config.output_dir)
     try:
-        poster_tool._run(
-            prompt=cover_prompt.strip(),
-            headline=headline,
-            sub_headlines=sub_headlines,
-            sub_prompts=sub_prompts,
-        )
+        generate_image.invoke({
+            "prompt": cover_prompt.strip(),
+            "headline": headline,
+            "sub_headlines": sub_headlines,
+            "sub_prompts": sub_prompts,
+        })
         import glob
         paths = sorted(glob.glob(os.path.join(config.output_dir, "poster_*.jpg")))
         paths.sort(key=lambda p: 0 if "final" in p else 1)
@@ -534,14 +536,6 @@ def run_graph(
     max_attempts: int = 3,
     on_event: Optional[Callable] = None,
 ) -> dict:
-    """
-    LangGraph 主入口 —— 替代 run_crew_with_retry
-
-    on_event(event_type: str, data: dict)
-      - "phase": {"phase": "search/copy/critic/visual", "label": "..."}
-      - "log": {"content": "...", "type": "info/done/error"}
-      - "token": {"content": "..."}   # 逐字 streaming（预留）
-    """
     global _event_cb
     _event_cb = on_event
 

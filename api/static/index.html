@@ -335,8 +335,8 @@
       <!-- 阶段时间线 -->
       <div class="phase-timeline" id="phase-timeline">
         <div class="phase-row pending" id="phase-search"><span class="icon">🔍</span><span class="label">资料搜集</span><span class="check"></span></div>
-        <div class="phase-row pending" id="phase-copy"><span class="icon">✍️</span><span class="label">金牌文案撰写</span><span class="check"></span></div>
-        <div class="phase-row pending" id="phase-critic"><span class="icon">🔎</span><span class="label">质量审核评分</span><span class="check"></span></div>
+        <div class="phase-row pending" id="phase-copy"><span class="icon">✍️</span><span class="label">文案撰写</span><span class="check"></span></div>
+        <div class="phase-row pending" id="phase-critic"><span class="icon">🔎</span><span class="label">质量审核</span><span class="check"></span></div>
         <div class="phase-row pending" id="phase-visual"><span class="icon">🎨</span><span class="label">海报生成</span><span class="check"></span></div>
       </div>
 
@@ -471,15 +471,37 @@ function confirmHeadline() {
 const PHASE_ORDER = { search: 0, copy: 1, critic: 2, visual: 3 };
 const PHASE_PCT = { search: 15, copy: 40, critic: 65, visual: 90 };
 
+let retryCount = 0;
+let lastScore = 0;
+
 function markPhaseById(phase, label) {
   const id = 'phase-' + phase;
   const el = document.getElementById(id);
-  if (el) { el.classList.remove('pending'); el.querySelector('.check').textContent = '✅'; }
+  if (!el) return;
+
+  // 返修时重置 copy 和 critic 的完成状态
+  if ((phase === 'copy' || phase === 'critic') && el.querySelector('.check').textContent === '✅') {
+    retryCount++;
+    el.querySelector('.check').textContent = '';
+    el.classList.add('pending');
+  }
+
+  // 点亮阶段
+  el.classList.remove('pending');
+  el.querySelector('.check').textContent = '✅';
+
+  // 返修轮次显示
+  const defaultLabels = { search: '资料搜集', copy: '文案撰写', critic: '质量审核', visual: '海报生成' };
+  let displayLabel = defaultLabels[phase] || '';
+  if ((phase === 'copy' || phase === 'critic') && retryCount > 0) {
+    displayLabel += ' · 第' + (retryCount + 1) + '轮';
+  }
+
   const idx = PHASE_ORDER[phase] || 0;
   const pct = PHASE_PCT[phase] || (idx * 25);
   document.getElementById('progress-fill').style.width = pct + '%';
   const s = Math.floor((Date.now() - startTs) / 1000);
-  document.getElementById('progress-phase').textContent = (label || '') + ' · ' + s + '秒';
+  document.getElementById('progress-phase').textContent = displayLabel + ' · ' + s + '秒';
 }
 
 async function launchGen() {
@@ -493,6 +515,7 @@ async function launchGen() {
 
   // Reset phase timeline
   document.querySelectorAll('.phase-row').forEach(r => { r.classList.add('pending'); r.querySelector('.check').textContent = ''; });
+  retryCount = 0; lastScore = 0;
 
   let topic = document.getElementById('topic-input').value.trim();
   if (chosenHeadline) {
@@ -646,15 +669,17 @@ function displayResult(copyText, criticText, posterPaths, score) {
   const subs = posterPaths.filter(p => !p.toLowerCase().includes('final'));
   const coverPath = covers.length > 0 ? covers[0] : (posterPaths.length > 0 ? posterPaths[0] : null);
 
+  const _v = Date.now(); // 缓存破坏
   if (coverPath) {
-    posterArea.innerHTML = `<img class="poster-img" src="/outputs/${basename(coverPath)}" alt="海报封面" onerror="this.parentElement.innerHTML='<p style=color:var(--muted)>⚠️ 海报未生成</p>'">`;
+    posterArea.innerHTML = `<img class="poster-img" src="/outputs/${basename(coverPath)}?v=${_v}" alt="海报封面" onerror="this.parentElement.innerHTML='<p style=color:var(--muted)>⚠️ 海报未生成</p>'">`;
   } else {
     posterArea.innerHTML = '<p style="color:var(--muted)">⚠️ 未生成海报</p>';
   }
 
   if (subs.length > 0) {
+    const _v = Date.now();
     subArea.innerHTML = '<p class="poster-label">📚 正文图</p><div class="subposter-grid">' +
-      subs.slice(0, 3).map(s => `<img src="/outputs/${basename(s)}" onerror="this.style.display='none'" alt="正文图">`).join('') +
+      subs.slice(0, 3).map(s => `<img src="/outputs/${basename(s)}?v=${_v}" onerror="this.style.display='none'" alt="正文图">`).join('') +
       '</div>';
   }
 
